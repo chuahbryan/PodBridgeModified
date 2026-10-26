@@ -1,16 +1,19 @@
+using System.Security;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using PodBridge.Core.Popup;
 
 namespace PodBridge.App;
 
 /// <summary>
-/// The connect / case-open pop-up, in the style of the iPhone AirPods card: a rounded dark
-/// card centred at the bottom of the screen that rises out from behind the taskbar edge with
-/// a small spring overshoot, shows an earbuds-and-case drawing, the model name and a battery
-/// ring per component, then sinks back down and fades out on its own.
+/// The connect / case-open pop-up: a rounded card centred at the bottom of the screen that
+/// rises out from behind the taskbar edge with a small spring overshoot. It shows the model
+/// name and, for each component the model reports, a simple earbud / case drawing with a
+/// battery icon and percentage; it follows the Windows light / dark app theme, then sinks
+/// back down and fades out on its own.
 /// <para>
 /// The window's bottom edge is aligned to the bottom of the work area (the top of the
 /// taskbar, wherever it is docked) and the card is moved with a transform inside the window,
@@ -22,6 +25,9 @@ namespace PodBridge.App;
 /// </summary>
 public partial class PopupWindow : Window
 {
+    private const string ThemeKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string LightThemeValue = "AppsUseLightTheme";
+
     private static readonly Duration RiseDuration = new(TimeSpan.FromMilliseconds(560));
     private static readonly Duration SinkDuration = new(TimeSpan.FromMilliseconds(260));
     private static readonly Duration FadeInDuration = new(TimeSpan.FromMilliseconds(200));
@@ -39,6 +45,10 @@ public partial class PopupWindow : Window
 
         InitializeComponent();
         DataContext = content;
+        if (IsLightTheme())
+        {
+            ApplyLightTheme();
+        }
 
         _dismissTimer = new DispatcherTimer { Interval = DisplayTime };
         _dismissTimer.Tick += (_, _) => BeginClose();
@@ -56,6 +66,38 @@ public partial class PopupWindow : Window
         _dismissTimer.Stop();
         base.OnClosed(e);
     }
+
+    // Read-only check of the per-user "apps use light theme" setting; any failure to read it
+    // falls back to the dark card.
+    private static bool IsLightTheme()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(ThemeKeyPath);
+            return key?.GetValue(LightThemeValue) is int value && value != 0;
+        }
+        catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return false;
+        }
+    }
+
+    // Swap the dark brushes declared in XAML for their light equivalents; the XAML refers to
+    // them with DynamicResource, so the card picks the new values up.
+    private void ApplyLightTheme()
+    {
+        Resources["CardBackground"] = SolidBrush(0xFAFFFFFF);
+        Resources["CardBorder"] = SolidBrush(0x1F000000);
+        Resources["PrimaryText"] = SolidBrush(0xFF1C1C1E);
+        Resources["BodyFill"] = SolidBrush(0xFFF7F7FA);
+        Resources["BodyStroke"] = SolidBrush(0xFFC7C7CC);
+        Resources["BatteryOutline"] = SolidBrush(0x99000000);
+        Resources["CloseBackground"] = SolidBrush(0x14000000);
+        Resources["CloseForeground"] = SolidBrush(0x99000000);
+    }
+
+    private static SolidColorBrush SolidBrush(uint argb)
+        => new(Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb));
 
     // Centre the window at the bottom of the work area (its bottom edge on the taskbar's top
     // edge), then lift the card up into view from below that edge with a spring overshoot.

@@ -167,14 +167,17 @@
    maps the state plus the model's `AirPodsModelInfo` shape (resolved via `IModelRegistry`)
    to one `PopupBattery` gauge per reported component (left/right/case, or a single unit;
    the case gauge is hidden for models without a battery-reporting case). `PopupWindow`
-   (`App`, WPF) renders it as a borderless, transparent, topmost, non-activating card:
-   a generic earbuds-and-case drawing, the model name and one circular battery ring per
-   gauge (`RingDashConverter` turns the percentage into the ring's dash array). The window
-   is centred with its bottom edge on the work-area bottom (the taskbar's top edge) and the
-   card is moved by a transform inside it, so it rises out from behind the taskbar edge
-   with a spring overshoot and can never overlap the taskbar. It auto-dismisses after ~5 s
-   (hover keeps it open, click dismisses) and never steals focus. At most one is shown at a
-   time. No new OS boundary and no P/Invoke.
+   (`App`, WPF) renders it as a borderless, transparent, topmost, non-activating rounded
+   card: the model name, then per gauge a simple original drawing (left bud / right bud /
+   case, or headphones for a single unit — no Apple artwork or logo), a horizontal battery
+   icon (green, red when low, a bolt while charging) and the percentage, plus a close
+   mark. It follows the Windows light / dark app theme (a read-only read of the per-user
+   `AppsUseLightTheme` value, dark on any failure). The window is centred with its bottom
+   edge on the work-area bottom (the taskbar's top edge) and the card is moved by a
+   transform inside it, so it rises out from behind the taskbar edge with a spring
+   overshoot and can never overlap the taskbar. It auto-dismisses after ~5 s (hover keeps
+   it open, click dismisses) and never steals focus. At most one is shown at a time. No
+   new OS boundary and no P/Invoke.
 
 ## Where new code goes
 

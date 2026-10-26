@@ -1,7 +1,6 @@
 <Window x:Class="PodBridge.App.PopupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:PodBridge.App"
         Title="PodBridge"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -14,44 +13,58 @@
         Focusable="False">
 
   <Window.Resources>
-    <local:RingDashConverter x:Key="RingDash" />
+    <!-- Theme brushes. These are the DARK theme values; PopupWindow.xaml.cs swaps in the
+         light values at start-up when Windows is set to a light app theme. Everything below
+         refers to them with DynamicResource so a swap takes effect. -->
+    <SolidColorBrush x:Key="CardBackground" Color="#F21C1C1E" />
+    <SolidColorBrush x:Key="CardBorder" Color="#26FFFFFF" />
+    <SolidColorBrush x:Key="PrimaryText" Color="#FFF2F2F7" />
+    <SolidColorBrush x:Key="BodyFill" Color="#FFEDEDF2" />
+    <SolidColorBrush x:Key="BodyStroke" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="BatteryOutline" Color="#99FFFFFF" />
+    <SolidColorBrush x:Key="CloseBackground" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="CloseForeground" Color="#B3FFFFFF" />
 
-    <!-- The coloured arc of a gauge. White by default, red when low, green when charging
-         (low first, charging second: a charging gauge shows green even when low). The dash
-         array is computed from the percentage by RingDashConverter. An unknown level draws
-         no arc at all. -->
-    <Style x:Key="RingProgress" TargetType="Ellipse">
-      <Setter Property="Stroke" Value="#FFF2F2F7" />
-      <Setter Property="StrokeThickness" Value="7" />
-      <Setter Property="StrokeStartLineCap" Value="Round" />
-      <Setter Property="StrokeEndLineCap" Value="Round" />
-      <Setter Property="StrokeDashCap" Value="Round" />
-      <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-      <Setter Property="RenderTransform">
+    <!-- Horizontal battery icon: an outline with a terminal nub and a filled level. The
+         ProgressBar finds PART_Track / PART_Indicator and sizes the indicator to the
+         percentage of the track. Green normally, red when low. -->
+    <Style x:Key="BatteryBar" TargetType="ProgressBar">
+      <Setter Property="Minimum" Value="0" />
+      <Setter Property="Maximum" Value="100" />
+      <Setter Property="Foreground" Value="#FF34C759" />
+      <Setter Property="Template">
         <Setter.Value>
-          <RotateTransform Angle="-90" />
+          <ControlTemplate TargetType="ProgressBar">
+            <StackPanel Orientation="Horizontal">
+              <Border Width="34" Height="16" CornerRadius="5" BorderThickness="1.5"
+                      BorderBrush="{DynamicResource BatteryOutline}">
+                <Grid Margin="1.5">
+                  <Border x:Name="PART_Track" Background="Transparent" />
+                  <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
+                          Background="{TemplateBinding Foreground}" CornerRadius="3.5" />
+                </Grid>
+              </Border>
+              <Border Width="2.5" Height="6" Margin="1,0,0,0" CornerRadius="0,1.5,1.5,0"
+                      Background="{DynamicResource BatteryOutline}" />
+            </StackPanel>
+          </ControlTemplate>
         </Setter.Value>
       </Setter>
-      <Setter Property="StrokeDashArray"
-              Value="{Binding BarPercent, Converter={StaticResource RingDash}}" />
       <Style.Triggers>
-        <DataTrigger Binding="{Binding Percent}" Value="{x:Null}">
-          <Setter Property="Visibility" Value="Collapsed" />
-        </DataTrigger>
         <DataTrigger Binding="{Binding IsLow}" Value="True">
-          <Setter Property="Stroke" Value="#FFFF453A" />
-        </DataTrigger>
-        <DataTrigger Binding="{Binding Charging}" Value="True">
-          <Setter Property="Stroke" Value="#FF30D158" />
+          <Setter Property="Foreground" Value="#FFFF453A" />
         </DataTrigger>
       </Style.Triggers>
     </Style>
 
-    <Style x:Key="ChargingMark" TargetType="TextBlock">
-      <Setter Property="Text" Value="⚡" />
-      <Setter Property="Foreground" Value="#FF30D158" />
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="Margin" Value="0,0,3,0" />
+    <!-- Small lightning bolt shown next to the battery while charging. -->
+    <Style x:Key="ChargingBolt" TargetType="Path">
+      <Setter Property="Data" Value="M4,0 L0,6.2 L3,6.2 L2,11 L7,4 L4,4 Z" />
+      <Setter Property="Fill" Value="{DynamicResource PrimaryText}" />
+      <Setter Property="Width" Value="7" />
+      <Setter Property="Height" Value="11" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="Margin" Value="4,0,0,0" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Visibility" Value="Collapsed" />
       <Style.Triggers>
@@ -66,65 +79,145 @@
        the card starts below it, so it appears to rise out from behind the taskbar edge
        without ever overlapping it. The margins leave room for the shadow and the spring
        overshoot. The card starts invisible so nothing flashes before it is positioned. -->
-  <Border x:Name="Card" Width="360" Margin="24,36,24,32" Padding="24,22,24,20"
-          CornerRadius="28" Opacity="0"
-          Background="#F21C1C1E" BorderBrush="#26FFFFFF" BorderThickness="1">
+  <Border x:Name="Card" Width="352" Margin="24,36,24,32" Padding="28,30,28,26"
+          CornerRadius="36" Opacity="0" BorderThickness="1"
+          Background="{DynamicResource CardBackground}"
+          BorderBrush="{DynamicResource CardBorder}">
     <Border.RenderTransform>
       <TranslateTransform x:Name="CardShift" />
     </Border.RenderTransform>
     <Border.Effect>
-      <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.5" Color="Black" />
+      <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.35" Color="Black" />
     </Border.Effect>
 
-    <StackPanel>
-      <!-- Generic earbuds + charging case drawing (original shapes, no Apple artwork or logo). -->
-      <Canvas Width="220" Height="84" HorizontalAlignment="Center">
-        <!-- Left bud -->
-        <Border Canvas.Left="30" Canvas.Top="36" Width="9" Height="34"
-                CornerRadius="4.5" Background="#FFE5E5EA" />
-        <Ellipse Canvas.Left="20" Canvas.Top="12" Width="30" Height="32" Fill="#FFF2F2F7" />
-        <!-- Right bud -->
-        <Border Canvas.Left="181" Canvas.Top="36" Width="9" Height="34"
-                CornerRadius="4.5" Background="#FFE5E5EA" />
-        <Ellipse Canvas.Left="170" Canvas.Top="12" Width="30" Height="32" Fill="#FFF2F2F7" />
-        <!-- Case: body, lid seam and status light -->
-        <Border Canvas.Left="72" Canvas.Top="14" Width="76" Height="62"
-                CornerRadius="20" Background="#FFF2F2F7" />
-        <Rectangle Canvas.Left="72" Canvas.Top="34" Width="76" Height="2" Fill="#26000000" />
-        <Ellipse Canvas.Left="107" Canvas.Top="52" Width="6" Height="6" Fill="#FF30D158" />
-      </Canvas>
+    <Grid>
+      <StackPanel>
+        <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" FontSize="26"
+                   FontWeight="SemiBold" Foreground="{DynamicResource PrimaryText}" />
 
-      <TextBlock Text="{Binding Title}" Margin="0,14,0,0" HorizontalAlignment="Center"
-                 FontSize="20" FontWeight="SemiBold" Foreground="#FFF2F2F7" />
-      <TextBlock Text="Connected" Margin="0,2,0,0" HorizontalAlignment="Center"
-                 FontSize="13" Foreground="#99FFFFFF" />
+        <!-- One column per component the model reports: a drawing, a battery, a percentage. -->
+        <ItemsControl ItemsSource="{Binding Batteries}" Margin="0,24,0,0"
+                      HorizontalAlignment="Center" Focusable="False">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Width="92" Margin="4,0">
 
-      <!-- One ring per component the model reports: ring + percent, then label. -->
-      <ItemsControl ItemsSource="{Binding Batteries}" Margin="0,18,0,0"
-                    HorizontalAlignment="Center" Focusable="False">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal" />
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Margin="12,0" HorizontalAlignment="Center">
-              <Grid Width="72" Height="72">
-                <Ellipse Stroke="#33FFFFFF" StrokeThickness="7" />
-                <Ellipse Style="{StaticResource RingProgress}" />
-                <TextBlock Text="{Binding PercentText}" FontSize="14" FontWeight="SemiBold"
-                           Foreground="#FFF2F2F7" HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
-              </Grid>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
-                <TextBlock Style="{StaticResource ChargingMark}" />
-                <TextBlock Text="{Binding Label}" FontSize="13" Foreground="#B3FFFFFF" />
+                <!-- Simple original drawings (no Apple artwork or logo). Exactly one is
+                     visible, chosen from the component's label. -->
+                <Grid Width="80" Height="86" HorizontalAlignment="Center">
+
+                  <!-- Left bud -->
+                  <Grid RenderTransformOrigin="0.5,0.5">
+                    <Grid.RenderTransform>
+                      <RotateTransform Angle="-14" />
+                    </Grid.RenderTransform>
+                    <Grid.Style>
+                      <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding Label}" Value="Left">
+                            <Setter Property="Visibility" Value="Visible" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Grid.Style>
+                    <Border Width="11" Height="46" CornerRadius="5.5" VerticalAlignment="Bottom"
+                            Margin="0,0,0,2" Background="{DynamicResource BodyFill}"
+                            BorderBrush="{DynamicResource BodyStroke}" BorderThickness="1" />
+                    <Ellipse Width="34" Height="40" VerticalAlignment="Top" Margin="0,6,0,0"
+                             Fill="{DynamicResource BodyFill}"
+                             Stroke="{DynamicResource BodyStroke}" StrokeThickness="1" />
+                  </Grid>
+
+                  <!-- Right bud (mirrored tilt) -->
+                  <Grid RenderTransformOrigin="0.5,0.5">
+                    <Grid.RenderTransform>
+                      <RotateTransform Angle="14" />
+                    </Grid.RenderTransform>
+                    <Grid.Style>
+                      <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding Label}" Value="Right">
+                            <Setter Property="Visibility" Value="Visible" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Grid.Style>
+                    <Border Width="11" Height="46" CornerRadius="5.5" VerticalAlignment="Bottom"
+                            Margin="0,0,0,2" Background="{DynamicResource BodyFill}"
+                            BorderBrush="{DynamicResource BodyStroke}" BorderThickness="1" />
+                    <Ellipse Width="34" Height="40" VerticalAlignment="Top" Margin="0,6,0,0"
+                             Fill="{DynamicResource BodyFill}"
+                             Stroke="{DynamicResource BodyStroke}" StrokeThickness="1" />
+                  </Grid>
+
+                  <!-- Charging case: body, lid seam and a small slot. -->
+                  <Grid>
+                    <Grid.Style>
+                      <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding Label}" Value="Case">
+                            <Setter Property="Visibility" Value="Visible" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Grid.Style>
+                    <Border Width="68" Height="60" CornerRadius="20" VerticalAlignment="Center"
+                            Background="{DynamicResource BodyFill}"
+                            BorderBrush="{DynamicResource BodyStroke}" BorderThickness="1" />
+                    <Rectangle Width="68" Height="1.5" Margin="0,0,0,18"
+                               Fill="{DynamicResource BodyStroke}" />
+                    <Border Width="22" Height="6" CornerRadius="3" Margin="0,0,0,34"
+                            Background="{DynamicResource BodyStroke}" />
+                  </Grid>
+
+                  <!-- Single-unit headphones (models with one battery). -->
+                  <TextBlock Text="&#xE7F6;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                             FontSize="52" HorizontalAlignment="Center" VerticalAlignment="Center"
+                             Foreground="{DynamicResource BodyFill}">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding Label}" Value="Battery">
+                            <Setter Property="Visibility" Value="Visible" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                  </TextBlock>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                  <ProgressBar Style="{StaticResource BatteryBar}"
+                               Value="{Binding BarPercent, Mode=OneWay}"
+                               VerticalAlignment="Center" />
+                  <Path Style="{StaticResource ChargingBolt}" />
+                </StackPanel>
+                <TextBlock Text="{Binding PercentText}" HorizontalAlignment="Center"
+                           Margin="0,5,0,0" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryText}" />
               </StackPanel>
-            </StackPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- Close button (top-right). Clicking anywhere on the card dismisses it too. -->
+      <Grid Width="26" Height="26" HorizontalAlignment="Right" VerticalAlignment="Top"
+            Margin="0,-14,-12,0">
+        <Ellipse Fill="{DynamicResource CloseBackground}" />
+        <Path Data="M0,0 L8,8 M8,0 L0,8" Width="8" Height="8" StrokeThickness="1.8"
+              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+              Stroke="{DynamicResource CloseForeground}" />
+      </Grid>
+    </Grid>
   </Border>
 </Window>
