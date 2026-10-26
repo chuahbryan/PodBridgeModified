@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using PodBridge.Core.Popup;
@@ -6,24 +7,28 @@ using PodBridge.Core.Popup;
 namespace PodBridge.App;
 
 /// <summary>
-/// The connect / case-open pop-up: a small borderless, always-on-top, non-activating
-/// card that slides up and fades in above the taskbar (bottom-right of the work area),
-/// shows the model name and battery gauges, then slides down and fades out on its own.
-/// Hovering keeps it open; clicking dismisses it. <see cref="Window.ShowActivated"/> is
-/// off so it never steals keyboard focus from whatever the user is typing in. It owns no
+/// The connect / case-open pop-up, in the style of the iPhone AirPods card: a rounded dark
+/// card centred at the bottom of the screen that rises out from behind the taskbar edge with
+/// a small spring overshoot, shows an earbuds-and-case drawing, the model name and a battery
+/// ring per component, then sinks back down and fades out on its own.
+/// <para>
+/// The window's bottom edge is aligned to the bottom of the work area (the top of the
+/// taskbar, wherever it is docked) and the card is moved with a transform inside the window,
+/// so the window clips it at that edge: it slides out from behind the taskbar and can never
+/// overlap it. Hovering keeps the card open; clicking dismisses it.
+/// <see cref="Window.ShowActivated"/> is off so it never steals keyboard focus. It owns no
 /// subscriptions — <see cref="PopupController"/> creates one per pop-up and closes it.
+/// </para>
 /// </summary>
 public partial class PopupWindow : Window
 {
-    private const double ScreenMargin = 12;  // gap from the work-area edge (above the taskbar)
-    private const double SlideDistance = 28; // how far the card travels while fading
-
-    private static readonly Duration ShowDuration = new(TimeSpan.FromMilliseconds(320));
-    private static readonly Duration HideDuration = new(TimeSpan.FromMilliseconds(220));
+    private static readonly Duration RiseDuration = new(TimeSpan.FromMilliseconds(560));
+    private static readonly Duration SinkDuration = new(TimeSpan.FromMilliseconds(260));
+    private static readonly Duration FadeInDuration = new(TimeSpan.FromMilliseconds(200));
+    private static readonly Duration FadeOutDuration = new(TimeSpan.FromMilliseconds(220));
     private static readonly TimeSpan DisplayTime = TimeSpan.FromSeconds(5);
 
     private readonly DispatcherTimer _dismissTimer;
-    private double _restTop;
     private bool _isClosing;
     private bool _isClosed;
 
@@ -52,21 +57,19 @@ public partial class PopupWindow : Window
         base.OnClosed(e);
     }
 
-    // Place the card in the bottom-right of the work area (which already excludes the
-    // taskbar, wherever it is docked), then slide it up from below while fading in.
+    // Centre the window at the bottom of the work area (its bottom edge on the taskbar's top
+    // edge), then lift the card up into view from below that edge with a spring overshoot.
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         var workArea = SystemParameters.WorkArea;
-        Left = workArea.Right - ActualWidth - ScreenMargin;
-        _restTop = workArea.Bottom - ActualHeight - ScreenMargin;
-        Top = _restTop;
+        Left = workArea.Left + ((workArea.Width - ActualWidth) / 2);
+        Top = workArea.Bottom - ActualHeight;
 
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        BeginAnimation(TopProperty, new DoubleAnimation(_restTop + SlideDistance, _restTop, ShowDuration)
-        {
-            EasingFunction = ease,
-        });
-        BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, ShowDuration));
+        var spring = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.45 };
+        CardShift.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(ActualHeight, 0, RiseDuration) { EasingFunction = spring });
+        Card.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, FadeInDuration));
 
         _dismissTimer.Start();
     }
@@ -82,7 +85,8 @@ public partial class PopupWindow : Window
         _dismissTimer.Start();
     }
 
-    // Slide down + fade out, then really close. Safe to call repeatedly or after close.
+    // Sink back below the taskbar edge and fade out, then really close. Safe to call
+    // repeatedly or after the window has closed.
     private void BeginClose()
     {
         if (_isClosing || _isClosed)
@@ -93,7 +97,7 @@ public partial class PopupWindow : Window
         _isClosing = true;
         _dismissTimer.Stop();
 
-        var fade = new DoubleAnimation(0, HideDuration);
+        var fade = new DoubleAnimation(0, FadeOutDuration);
         fade.Completed += (_, _) =>
         {
             if (!_isClosed)
@@ -102,10 +106,12 @@ public partial class PopupWindow : Window
             }
         };
 
-        BeginAnimation(TopProperty, new DoubleAnimation(_restTop + SlideDistance, HideDuration)
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn },
-        });
-        BeginAnimation(OpacityProperty, fade);
+        CardShift.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(ActualHeight, SinkDuration)
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn },
+            });
+        Card.BeginAnimation(OpacityProperty, fade);
     }
 }
