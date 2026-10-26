@@ -12,6 +12,12 @@ namespace PodBridge.Core.Tests.Popup;
 /// </summary>
 public class PopupContentTests
 {
+    // Expected values live in static readonly fields (CA1861: no constant array arguments).
+    private static readonly string[] BudsAndCaseLabels = ["Left", "Right", "Case"];
+    private static readonly string[] BudsAndCasePercentTexts = ["80%", "70%", "100%"];
+    private static readonly bool[] BudsAndCaseCharging = [false, false, true];
+    private static readonly string[] BudsOnlyLabels = ["Left", "Right"];
+
     private static AirPodsModelInfo Dual(bool batteryCase = true) => new()
     {
         Model = AirPodsModel.AirPodsPro,
@@ -45,9 +51,9 @@ public class PopupContentTests
         var content = PopupContent.ForState(state, Dual());
 
         Assert.Equal("AirPods Pro", content.Title);
-        Assert.Equal(new[] { "Left", "Right", "Case" }, content.Batteries.Select(b => b.Label));
-        Assert.Equal(new[] { "80%", "70%", "100%" }, content.Batteries.Select(b => b.PercentText));
-        Assert.Equal(new[] { false, false, true }, content.Batteries.Select(b => b.Charging));
+        Assert.Equal(BudsAndCaseLabels, content.Batteries.Select(b => b.Label));
+        Assert.Equal(BudsAndCasePercentTexts, content.Batteries.Select(b => b.PercentText));
+        Assert.Equal(BudsAndCaseCharging, content.Batteries.Select(b => b.Charging));
     }
 
     [Fact]
@@ -57,7 +63,7 @@ public class PopupContentTests
 
         var content = PopupContent.ForState(state, Dual(batteryCase: false));
 
-        Assert.Equal(new[] { "Left", "Right" }, content.Batteries.Select(b => b.Label));
+        Assert.Equal(BudsOnlyLabels, content.Batteries.Select(b => b.Label));
     }
 
     [Fact]
