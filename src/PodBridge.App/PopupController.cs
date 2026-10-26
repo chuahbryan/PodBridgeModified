@@ -22,6 +22,7 @@ public sealed class PopupController : IDisposable
     private readonly IModelRegistry _models;
     private readonly PopupPolicy _policy;
     private readonly Dispatcher _dispatcher;
+    private readonly string? _title;
 
     private PopupWindow? _window;
 
@@ -29,24 +30,36 @@ public sealed class PopupController : IDisposable
         IDeviceStateProvider provider,
         IModelRegistry models,
         PopupPolicy policy,
-        Dispatcher dispatcher)
+        Dispatcher dispatcher,
+        string? title)
     {
         _provider = provider;
         _models = models;
         _policy = policy;
         _dispatcher = dispatcher;
+        _title = title;
     }
 
     /// <summary>
     /// Creates a controller binding <paramref name="provider"/> to the pop-up. Call
     /// <see cref="Start"/> to begin listening.
     /// </summary>
+    /// <param name="provider">The connection-gated device-state source.</param>
+    /// <param name="models">Resolves the identified model to its display shape.</param>
+    /// <param name="policy">Decides when a pop-up is due.</param>
+    /// <param name="dispatcher">The UI dispatcher state events are marshalled to.</param>
+    /// <param name="title">
+    /// Optional title to show instead of the model name (for example the owner's device name);
+    /// <see langword="null"/> shows the model name.
+    /// </param>
+    /// <returns>The not-yet-started controller.</returns>
     public static PopupController Create(
         IDeviceStateProvider provider,
         IModelRegistry models,
         PopupPolicy policy,
-        Dispatcher dispatcher)
-        => new(provider, models, policy, dispatcher);
+        Dispatcher dispatcher,
+        string? title = null)
+        => new(provider, models, policy, dispatcher, title);
 
     /// <summary>Subscribes to state changes. Call on the UI thread (e.g. from app startup).</summary>
     public void Start() => _provider.StateChanged += OnStateChanged;
@@ -69,7 +82,7 @@ public sealed class PopupController : IDisposable
             return;
         }
 
-        var content = PopupContent.ForState(state, _models.Resolve(state.Model));
+        var content = PopupContent.ForState(state, _models.Resolve(state.Model), _title);
 
         // Replace a pop-up that is still on screen rather than stacking them.
         _window?.Close();

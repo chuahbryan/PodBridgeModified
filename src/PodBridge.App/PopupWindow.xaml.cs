@@ -1,5 +1,6 @@
 using System.Security;
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -45,6 +46,7 @@ public partial class PopupWindow : Window
 
         InitializeComponent();
         DataContext = content;
+        SetTitle(content.Title);
         if (IsLightTheme())
         {
             ApplyLightTheme();
@@ -65,6 +67,22 @@ public partial class PopupWindow : Window
         _isClosed = true;
         _dismissTimer.Stop();
         base.OnClosed(e);
+    }
+
+    // "Bryan Chuah's AirPods Pro": the owner's name in regular weight, then "AirPods Pro" in
+    // bold. A title without "AirPods" (e.g. a generic model name) is shown bold throughout.
+    private void SetTitle(string title)
+    {
+        TitleText.Inlines.Clear();
+
+        var brandStart = title.IndexOf("AirPods", StringComparison.Ordinal);
+        if (brandStart > 0)
+        {
+            TitleText.Inlines.Add(new Run(title[..brandStart]));
+        }
+
+        var boldPart = brandStart >= 0 ? title[brandStart..] : title;
+        TitleText.Inlines.Add(new Run(boldPart) { FontWeight = FontWeights.Bold });
     }
 
     // Read-only check of the per-user "apps use light theme" setting; any failure to read it

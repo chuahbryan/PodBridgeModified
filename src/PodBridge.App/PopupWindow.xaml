@@ -79,7 +79,7 @@
        the card starts below it, so it appears to rise out from behind the taskbar edge
        without ever overlapping it. The margins leave room for the shadow and the spring
        overshoot. The card starts invisible so nothing flashes before it is positioned. -->
-  <Border x:Name="Card" Width="352" Margin="24,36,24,32" Padding="28,30,28,26"
+  <Border x:Name="Card" Width="330" Margin="24,36,24,32" Padding="26,28,26,24"
           CornerRadius="36" Opacity="0" BorderThickness="1"
           Background="{DynamicResource CardBackground}"
           BorderBrush="{DynamicResource CardBorder}">
@@ -92,11 +92,14 @@
 
     <Grid>
       <StackPanel>
-        <TextBlock Text="{Binding Title}" HorizontalAlignment="Center" FontSize="26"
-                   FontWeight="SemiBold" Foreground="{DynamicResource PrimaryText}" />
+        <!-- The name is regular weight and "AirPods ..." bold; the runs are built in
+             PopupWindow.xaml.cs from the title. Wraps rather than clips a long name. -->
+        <TextBlock x:Name="TitleText" HorizontalAlignment="Center" TextAlignment="Center"
+                   TextWrapping="Wrap" FontSize="20" Margin="12,0"
+                   Foreground="{DynamicResource PrimaryText}" />
 
         <!-- One column per component the model reports: a drawing, a battery, a percentage. -->
-        <ItemsControl ItemsSource="{Binding Batteries}" Margin="0,24,0,0"
+        <ItemsControl ItemsSource="{Binding Batteries}" Margin="0,22,0,0"
                       HorizontalAlignment="Center" Focusable="False">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -105,11 +108,17 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <StackPanel Width="92" Margin="4,0">
+              <StackPanel Width="80" Margin="3,0">
 
                 <!-- Simple original drawings (no Apple artwork or logo). Exactly one is
-                     visible, chosen from the component's label. -->
-                <Grid Width="80" Height="86" HorizontalAlignment="Center">
+                     visible, chosen from the component's label. While the card is open the
+                     drawing slowly turns like a turntable: its width is squeezed to a sliver,
+                     flipped, and squeezed back (see the storyboard in DataTemplate.Triggers). -->
+                <Grid x:Name="Art" Width="80" Height="100" HorizontalAlignment="Center"
+                      RenderTransformOrigin="0.5,0.5">
+                  <Grid.RenderTransform>
+                    <ScaleTransform x:Name="Spin" ScaleX="1" />
+                  </Grid.RenderTransform>
 
                   <!-- Left bud -->
                   <Grid RenderTransformOrigin="0.5,0.5">
@@ -205,6 +214,41 @@
                            Margin="0,5,0,0" FontSize="12" FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryText}" />
               </StackPanel>
+
+              <DataTemplate.Triggers>
+                <!-- One full turn every 2.4 s, forever. Each segment's sine easing makes the
+                     width follow cos(angle): 1 -> 0 (edge-on) -> -1 (seen from behind) -> 0 -> 1. -->
+                <EventTrigger RoutedEvent="FrameworkElement.Loaded" SourceName="Art">
+                  <BeginStoryboard>
+                    <Storyboard RepeatBehavior="Forever">
+                      <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Spin"
+                                                     Storyboard.TargetProperty="ScaleX">
+                        <EasingDoubleKeyFrame KeyTime="0:0:0" Value="1" />
+                        <EasingDoubleKeyFrame KeyTime="0:0:0.6" Value="0">
+                          <EasingDoubleKeyFrame.EasingFunction>
+                            <SineEase EasingMode="EaseIn" />
+                          </EasingDoubleKeyFrame.EasingFunction>
+                        </EasingDoubleKeyFrame>
+                        <EasingDoubleKeyFrame KeyTime="0:0:1.2" Value="-1">
+                          <EasingDoubleKeyFrame.EasingFunction>
+                            <SineEase EasingMode="EaseOut" />
+                          </EasingDoubleKeyFrame.EasingFunction>
+                        </EasingDoubleKeyFrame>
+                        <EasingDoubleKeyFrame KeyTime="0:0:1.8" Value="0">
+                          <EasingDoubleKeyFrame.EasingFunction>
+                            <SineEase EasingMode="EaseIn" />
+                          </EasingDoubleKeyFrame.EasingFunction>
+                        </EasingDoubleKeyFrame>
+                        <EasingDoubleKeyFrame KeyTime="0:0:2.4" Value="1">
+                          <EasingDoubleKeyFrame.EasingFunction>
+                            <SineEase EasingMode="EaseOut" />
+                          </EasingDoubleKeyFrame.EasingFunction>
+                        </EasingDoubleKeyFrame>
+                      </DoubleAnimationUsingKeyFrames>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </EventTrigger>
+              </DataTemplate.Triggers>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

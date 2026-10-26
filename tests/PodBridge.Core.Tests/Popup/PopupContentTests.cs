@@ -57,6 +57,21 @@ public class PopupContentTests
     }
 
     [Fact]
+    public void CustomTitle_ReplacesModelName()
+    {
+        var content = PopupContent.ForState(DeviceState.Unknown, Dual(), "Bryan Chuah's AirPods Pro");
+
+        Assert.Equal("Bryan Chuah's AirPods Pro", content.Title);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BlankCustomTitle_FallsBackToModelName(string? title)
+        => Assert.Equal("AirPods Pro", PopupContent.ForState(DeviceState.Unknown, Dual(), title).Title);
+
+    [Fact]
     public void ModelWithoutBatteryCase_HidesCaseGauge()
     {
         var state = new DeviceState { IsLive = true, LeftBatteryPercent = 50, RightBatteryPercent = 60 };

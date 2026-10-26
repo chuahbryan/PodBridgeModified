@@ -25,6 +25,10 @@ public partial class App : Application
     // Session-local: one instance per Windows user session (tray apps are per-user).
     private const string MutexName = @"Local\PodBridge.SingleInstance.4f3c9a02-2c1e-4d3a-9d0a-5f8a2b7c1d6e";
 
+    // Title shown on the connect pop-up. Personal fork: set this to your own device name, or to
+    // null to show the detected model name (e.g. "AirPods Pro") instead.
+    private const string? PopupTitle = "Bryan Chuah's AirPods Pro";
+
     private SingleInstanceGuard? _instanceGuard;
     private IHost? _host;
     private TrayIcon? _trayIcon;
@@ -159,7 +163,8 @@ public partial class App : Application
             stateProvider,
             services.GetRequiredService<IModelRegistry>(),
             new PopupPolicy(),
-            Dispatcher);
+            Dispatcher,
+            PopupTitle);
         _popupController.Start();
 
         _bleScanner = services.GetRequiredService<IBleScanner>();

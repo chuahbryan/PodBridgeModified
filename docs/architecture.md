@@ -169,9 +169,11 @@
    the case gauge is hidden for models without a battery-reporting case). `PopupWindow`
    (`App`, WPF) renders it as a borderless, transparent, topmost, non-activating rounded
    card: the model name, then per gauge a simple original drawing (left bud / right bud /
-   case, or headphones for a single unit — no Apple artwork or logo), a horizontal battery
-   icon (green, red when low, a bolt while charging) and the percentage, plus a close
-   mark. It follows the Windows light / dark app theme (a read-only read of the per-user
+   case, or headphones for a single unit — no Apple artwork or logo) that slowly turns like
+   a turntable (a looping sine-eased width flip), a horizontal battery icon (green, red when
+   low, a bolt while charging) and the percentage, plus a close mark. The title is the
+   model name unless the composition root passes a custom one (e.g. the owner's device
+   name), shown with the name in regular weight and "AirPods …" in bold. It follows the Windows light / dark app theme (a read-only read of the per-user
    `AppsUseLightTheme` value, dark on any failure). The window is centred with its bottom
    edge on the work-area bottom (the taskbar's top edge) and the card is moved by a
    transform inside it, so it rises out from behind the taskbar edge with a spring

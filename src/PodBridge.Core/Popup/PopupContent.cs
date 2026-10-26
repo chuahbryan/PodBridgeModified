@@ -20,8 +20,22 @@ public sealed record PopupContent
     /// <summary>Builds the pop-up content for a live <paramref name="state"/> of <paramref name="model"/>.</summary>
     /// <param name="state">The live device state.</param>
     /// <param name="model">The per-model shape resolved from <see cref="DeviceState.Model"/>.</param>
-    /// <returns>The content to display.</returns>
+    /// <returns>The content to display, titled with the model's name.</returns>
     public static PopupContent ForState(DeviceState state, AirPodsModelInfo model)
+        => ForState(state, model, title: null);
+
+    /// <summary>
+    /// Builds the pop-up content like <see cref="ForState(DeviceState, AirPodsModelInfo)"/>, but
+    /// with a caller-chosen title (for example the owner's own device name).
+    /// </summary>
+    /// <param name="state">The live device state.</param>
+    /// <param name="model">The per-model shape resolved from <see cref="DeviceState.Model"/>.</param>
+    /// <param name="title">
+    /// The title to show; <see langword="null"/>, empty or whitespace falls back to the
+    /// model's <see cref="AirPodsModelInfo.DisplayName"/>.
+    /// </param>
+    /// <returns>The content to display.</returns>
+    public static PopupContent ForState(DeviceState state, AirPodsModelInfo model, string? title)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(model);
@@ -42,7 +56,8 @@ public sealed record PopupContent
             batteries.Add(new PopupBattery("Case", state.CaseBatteryPercent, state.CaseCharging));
         }
 
-        return new PopupContent { Title = model.DisplayName, Batteries = batteries };
+        var effectiveTitle = string.IsNullOrWhiteSpace(title) ? model.DisplayName : title;
+        return new PopupContent { Title = effectiveTitle, Batteries = batteries };
     }
 
     // A single-unit model has one battery, but which advertisement slot carries it is not
