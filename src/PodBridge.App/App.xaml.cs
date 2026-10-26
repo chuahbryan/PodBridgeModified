@@ -8,6 +8,7 @@ using PodBridge.Core.Bluetooth;
 using PodBridge.Core.Branding;
 using PodBridge.Core.Diagnostics;
 using PodBridge.Core.Media;
+using PodBridge.Core.Popup;
 using PodBridge.Core.Protocol;
 using PodBridge.Core.Startup;
 using PodBridge.Windows.Logging;
@@ -33,6 +34,7 @@ public partial class App : Application
     private TrayStatusController? _trayStatusController;
     private TrayConnectController? _trayConnectController;
     private TrayBatteryController? _trayBatteryController;
+    private PopupController? _popupController;
     private TrayAudioController? _trayAudioController;
     private TrayMicController? _trayMicController;
     private TrayNoiseControlController? _trayNoiseControlController;
@@ -149,6 +151,16 @@ public partial class App : Application
 
         _trayBatteryController = TrayBatteryController.Create(_trayIcon!, stateProvider, Dispatcher);
         _trayBatteryController.Start();
+
+        // Connect / case-open pop-up: subscribes to the same connection-gated provider, so it
+        // can only ever fire for the connected AirPods. Subscribed before the scanner starts
+        // (below) so the first live state is not missed.
+        _popupController = PopupController.Create(
+            stateProvider,
+            services.GetRequiredService<IModelRegistry>(),
+            new PopupPolicy(),
+            Dispatcher);
+        _popupController.Start();
 
         _bleScanner = services.GetRequiredService<IBleScanner>();
 
@@ -351,6 +363,11 @@ public partial class App : Application
         // touches a disposed tray.
         _trayBatteryController?.Dispose();
         _trayBatteryController = null;
+
+        // Unsubscribe the pop-up controller and close any pop-up still on screen, so no
+        // window keeps the process alive after an explicit shutdown.
+        _popupController?.Dispose();
+        _popupController = null;
 
         _trayAudioController?.Dispose();
         _trayAudioController = null;

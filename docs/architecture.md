@@ -156,6 +156,21 @@
    no connect control, declined, timed out) `App` opens Windows Bluetooth settings as
    the fallback. With several AirPods paired, all receive the request and whichever
    pair is in range connects. `IConnectionMonitor` still drives the status line.
+7. **Connect / case-open pop-up (Tier 1, driver-free, no admin):** `PopupController`
+   (`App`) subscribes to the same connection-gated `IDeviceStateProvider` as the tray
+   battery and marshals each published `DeviceState` to the UI thread. Core's
+   `PopupPolicy` decides whether a pop-up is due: it fires on the not-live → live
+   transition (the AirPods connect, or start advertising again after going quiet, e.g.
+   the case lid is reopened while still connected), with a 10 s cooldown so a flapping
+   state never shows repeats. Because `IsLive` is only ever true for the connected
+   AirPods, nearby strangers' AirPods cannot trigger it. Core's `PopupContent.ForState`
+   maps the state plus the model's `AirPodsModelInfo` shape (resolved via `IModelRegistry`)
+   to one `PopupBattery` gauge per reported component (left/right/case, or a single unit;
+   the case gauge is hidden for models without a battery-reporting case). `PopupWindow`
+   (`App`, WPF) renders it as a borderless, transparent, topmost, non-activating card at
+   the bottom-right of the work area with a slide-up + fade animation, auto-dismisses
+   after ~5 s (hover keeps it open, click dismisses) and never steals focus. At most one
+   is shown at a time. No new OS boundary and no P/Invoke.
 
 ## Where new code goes
 
